@@ -1,0 +1,58 @@
+#include <WiFi.h>
+#include <WebServer.h>
+
+const char* ssid = "Your_SSID";    // Replace with your WiFi SSID
+const char* password = "Your_PASSWORD";  // Replace with your WiFi password
+
+#define TRIG_PIN 12
+#define ECHO_PIN 13
+
+WebServer server(80);
+
+// Function to measure distance
+float getDistance() {
+    digitalWrite(TRIG_PIN, LOW);
+    delayMicroseconds(2);
+    digitalWrite(TRIG_PIN, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(TRIG_PIN, LOW);
+  
+    long duration = pulseIn(ECHO_PIN, HIGH);
+    float distance = duration * 0.034 / 2;  // Convert to cm
+  
+    return distance;
+}
+
+// Webpage handler
+void handleRoot() {
+    float distance = getDistance();
+    String page = "<html><head><title>Distance Measurement</title></head><body>";
+    page += "<h1>Ultrasonic Sensor Distance</h1>";
+    page += "<h2>Distance: " + String(distance) + " cm</h2>";
+    page += "<meta http-equiv='refresh' content='1'>"; // Auto-refresh every 1 second
+    page += "</body></html>";
+
+    server.send(200, "text/html", page);
+}
+
+void setup() {
+    Serial.begin(115200);
+    pinMode(TRIG_PIN, OUTPUT);
+    pinMode(ECHO_PIN, INPUT);
+  
+    WiFi.begin(ssid, password);
+    Serial.print("Connecting to WiFi");
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println("\nWiFi connected!");
+    Serial.println(WiFi.localIP());  // Print ESP32 IP address
+
+    server.on("/", handleRoot);
+    server.begin();
+}
+
+void loop() {
+    server.handleClient();
+}
